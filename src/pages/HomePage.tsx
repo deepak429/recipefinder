@@ -5,6 +5,15 @@ import RecipeCard from "@/components/RecipeCard";
 import { useApp } from "@/context/AppContext";
 import { ChefHat, Search, Utensils } from "lucide-react";
 import { Link } from "react-router-dom";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
 const categories = [
   "All",
@@ -18,23 +27,121 @@ const categories = [
   "Vegetarian"
 ];
 
+const RECIPES_PER_PAGE = 12;
+
 const HomePage = () => {
   const { filteredRecipes, loading } = useApp();
   const [activeCategory, setActiveCategory] = useState("All");
-  const [displayedRecipes, setDisplayedRecipes] = useState(filteredRecipes);
+  const [displayedRecipes, setDisplayedRecipes] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   
   useEffect(() => {
+    let filtered;
     if (activeCategory === "All") {
-      setDisplayedRecipes(filteredRecipes);
+      filtered = filteredRecipes;
     } else {
-      const filtered = filteredRecipes.filter(recipe => 
+      filtered = filteredRecipes.filter(recipe => 
         recipe.category.some(cat => cat === activeCategory)
       );
-      setDisplayedRecipes(filtered);
     }
+    
+    // Calculate total pages
+    const total = Math.ceil(filtered.length / RECIPES_PER_PAGE);
+    setTotalPages(total);
+    
+    // Reset to first page when changing categories
+    setCurrentPage(1);
+    
+    // Get paginated recipes
+    const startIndex = 0;
+    const endIndex = Math.min(RECIPES_PER_PAGE, filtered.length);
+    setDisplayedRecipes(filtered.slice(startIndex, endIndex));
   }, [activeCategory, filteredRecipes]);
   
+  // Handle page change
+  useEffect(() => {
+    let filtered;
+    if (activeCategory === "All") {
+      filtered = filteredRecipes;
+    } else {
+      filtered = filteredRecipes.filter(recipe => 
+        recipe.category.some(cat => cat === activeCategory)
+      );
+    }
+    
+    const startIndex = (currentPage - 1) * RECIPES_PER_PAGE;
+    const endIndex = Math.min(startIndex + RECIPES_PER_PAGE, filtered.length);
+    setDisplayedRecipes(filtered.slice(startIndex, endIndex));
+  }, [currentPage, activeCategory, filteredRecipes]);
+  
   const featuredRecipes = filteredRecipes.slice(0, 3); // Use top 3 recipes for featured section
+  
+  // Generate pagination items
+  const renderPaginationItems = () => {
+    const items = [];
+    
+    // Always show first page
+    items.push(
+      <PaginationItem key="first">
+        <PaginationLink 
+          isActive={currentPage === 1} 
+          onClick={() => setCurrentPage(1)}
+        >
+          1
+        </PaginationLink>
+      </PaginationItem>
+    );
+    
+    // Show ellipsis if needed
+    if (currentPage > 3) {
+      items.push(
+        <PaginationItem key="ellipsis-1">
+          <PaginationEllipsis />
+        </PaginationItem>
+      );
+    }
+    
+    // Show current page and neighbors
+    for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
+      if (i === 1 || i === totalPages) continue; // Skip first and last as they're always shown
+      items.push(
+        <PaginationItem key={i}>
+          <PaginationLink 
+            isActive={currentPage === i} 
+            onClick={() => setCurrentPage(i)}
+          >
+            {i}
+          </PaginationLink>
+        </PaginationItem>
+      );
+    }
+    
+    // Show ellipsis if needed
+    if (currentPage < totalPages - 2 && totalPages > 3) {
+      items.push(
+        <PaginationItem key="ellipsis-2">
+          <PaginationEllipsis />
+        </PaginationItem>
+      );
+    }
+    
+    // Always show last page if there is more than one page
+    if (totalPages > 1) {
+      items.push(
+        <PaginationItem key="last">
+          <PaginationLink 
+            isActive={currentPage === totalPages} 
+            onClick={() => setCurrentPage(totalPages)}
+          >
+            {totalPages}
+          </PaginationLink>
+        </PaginationItem>
+      );
+    }
+    
+    return items;
+  };
   
   if (loading) {
     return (
@@ -112,7 +219,7 @@ const HomePage = () => {
         </div>
       </div>
       
-      {/* Recipe Grid */}
+      {/* Recipe Grid with Pagination */}
       {displayedRecipes.length === 0 ? (
         <div className="text-center py-12">
           <h3 className="text-xl font-medium">No recipes found</h3>
@@ -121,11 +228,36 @@ const HomePage = () => {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {displayedRecipes.map((recipe) => (
-            <RecipeCard key={recipe.id} recipe={recipe} />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-8">
+            {displayedRecipes.map((recipe) => (
+              <RecipeCard key={recipe.id} recipe={recipe} />
+            ))}
+          </div>
+          
+          {/* Pagination Component */}
+          {totalPages > 1 && (
+            <div className="my-8">
+              <Pagination>
+                <PaginationContent>
+                  {currentPage > 1 && (
+                    <PaginationItem>
+                      <PaginationPrevious onClick={() => setCurrentPage(currentPage - 1)} />
+                    </PaginationItem>
+                  )}
+                  
+                  {renderPaginationItems()}
+                  
+                  {currentPage < totalPages && (
+                    <PaginationItem>
+                      <PaginationNext onClick={() => setCurrentPage(currentPage + 1)} />
+                    </PaginationItem>
+                  )}
+                </PaginationContent>
+              </Pagination>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
