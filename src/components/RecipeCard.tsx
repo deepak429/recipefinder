@@ -6,6 +6,7 @@ import { Heart, Clock, ChefHat } from "lucide-react";
 import { Recipe } from "@/types/recipe";
 import { useApp } from "@/context/AppContext";
 import { cn } from "@/lib/utils";
+import { toast } from "@/components/ui/use-toast";
 
 interface RecipeCardProps {
   recipe: Recipe;
@@ -13,11 +14,24 @@ interface RecipeCardProps {
 
 const RecipeCard = ({ recipe }: RecipeCardProps) => {
   const { currentUser, toggleFavoriteRecipe, isRecipeFavorite } = useApp();
-  const isFavorite = currentUser && isRecipeFavorite(recipe.id);
+  const isFavorite = currentUser ? isRecipeFavorite(recipe.id) : false;
+  
+  // Handle image error by using a fallback
+  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    e.currentTarget.src = "https://images.unsplash.com/photo-1495521821757-a1efb6729352?q=80&w=800";
+    e.currentTarget.onerror = null; // Prevent infinite loops
+  };
   
   const handleFavoriteClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    
+    if (!currentUser) {
+      toast({
+        title: "Save recipes without login",
+        description: "Your favorites are saved in your browser. Create an account to sync across devices.",
+      });
+    }
     toggleFavoriteRecipe(recipe.id);
   };
   
@@ -28,7 +42,9 @@ const RecipeCard = ({ recipe }: RecipeCardProps) => {
           <img
             src={recipe.imageUrl}
             alt={recipe.title}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+            onError={handleImageError}
+            loading="lazy"
           />
           <Button
             variant="outline"

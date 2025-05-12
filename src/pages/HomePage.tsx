@@ -3,7 +3,8 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import RecipeCard from "@/components/RecipeCard";
 import { useApp } from "@/context/AppContext";
-import { ChefHat } from "lucide-react";
+import { ChefHat, Search, Utensils } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const categories = [
   "All",
@@ -33,7 +34,7 @@ const HomePage = () => {
     }
   }, [activeCategory, filteredRecipes]);
   
-  const featuredRecipe = filteredRecipes[0]; // Just use the first recipe as featured
+  const featuredRecipes = filteredRecipes.slice(0, 3); // Use top 3 recipes for featured section
   
   if (loading) {
     return (
@@ -47,34 +48,54 @@ const HomePage = () => {
   
   return (
     <div className="container mx-auto py-8 px-4">
-      {/* Hero Section */}
-      {featuredRecipe && (
-        <div className="relative rounded-xl overflow-hidden mb-12">
-          <div className="absolute inset-0 bg-gradient-to-r from-black/70 to-black/20 z-10"></div>
-          <img 
-            src={featuredRecipe.imageUrl} 
-            alt={featuredRecipe.title}
-            className="w-full h-[500px] object-cover"
-          />
-          <div className="absolute inset-0 z-20 flex flex-col justify-end p-8 text-white">
-            <div className="flex items-center gap-2 mb-3">
-              <ChefHat className="h-5 w-5" />
-              <span className="uppercase tracking-wider text-xs">Featured Recipe</span>
-            </div>
-            <h1 className="text-4xl font-bold mb-4">{featuredRecipe.title}</h1>
-            <p className="text-lg max-w-xl mb-6">{featuredRecipe.description}</p>
+      {/* Enhanced Hero Section */}
+      <div className="relative rounded-xl overflow-hidden mb-12 bg-gradient-to-r from-recipe-primary/10 to-recipe-secondary/30">
+        <div className="py-16 px-8 md:px-16 max-w-3xl">
+          <div className="flex items-center gap-2 mb-3">
+            <Utensils className="h-6 w-6 text-recipe-primary" />
+            <span className="uppercase tracking-wider text-sm font-medium text-recipe-primary">Delicious Recipes</span>
+          </div>
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-4">Discover & Share <br />Amazing Recipes</h1>
+          <p className="text-lg max-w-xl mb-8">Find thousands of recipes from around the world or share your own creations with our community.</p>
+          <div className="flex flex-wrap gap-4">
             <Button 
               asChild 
-              className="bg-recipe-primary hover:bg-recipe-primary/90 text-white w-fit"
+              size="lg"
+              className="bg-recipe-primary hover:bg-recipe-primary/90 text-white"
             >
-              <a href={`/recipe/${featuredRecipe.id}`}>View Recipe</a>
+              <Link to="/create-recipe">Create Recipe</Link>
+            </Button>
+            <Button 
+              asChild
+              size="lg" 
+              variant="outline"
+              className="border-recipe-primary text-recipe-primary hover:bg-recipe-primary/10"
+            >
+              <a href="#browse">Browse Recipes</a>
             </Button>
           </div>
         </div>
-      )}
+      </div>
+      
+      {/* Featured Recipes Section */}
+      <div className="mb-16">
+        <div className="flex justify-between items-center mb-8">
+          <h2 className="text-2xl md:text-3xl font-bold">Featured Recipes</h2>
+          <Button variant="outline" asChild>
+            <Link to="/">View All</Link>
+          </Button>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {featuredRecipes.map((recipe) => (
+            <RecipeCard key={recipe.id} recipe={recipe} />
+          ))}
+        </div>
+      </div>
       
       {/* Category Filter */}
-      <div className="mb-8 overflow-x-auto">
+      <div id="browse" className="mb-8 overflow-x-auto">
+        <h2 className="text-2xl md:text-3xl font-bold mb-6">Browse by Category</h2>
         <div className="flex gap-2 pb-2">
           {categories.map((category) => (
             <Button

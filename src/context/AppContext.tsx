@@ -22,12 +22,16 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | null>(null);
 
+// For guest users (non-authenticated)
+const GUEST_FAVORITES_KEY = 'guest_favorites';
+
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [filteredRecipes, setFilteredRecipes] = useState<Recipe[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [guestFavorites, setGuestFavorites] = useState<string[]>([]);
 
   // Initialize recipes and current user
   useEffect(() => {
@@ -40,6 +44,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       // Load current user
       const user = getCurrentUser();
       setCurrentUser(user);
+      
+      // Load guest favorites
+      const storedGuestFavorites = localStorage.getItem(GUEST_FAVORITES_KEY);
+      if (storedGuestFavorites) {
+        setGuestFavorites(JSON.parse(storedGuestFavorites));
+      }
       
       setLoading(false);
     };
@@ -63,6 +73,16 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     
     if (user) {
       setCurrentUser(user);
+      
+      // Merge guest favorites with user favorites if there are any
+      if (guestFavorites.length > 0) {
+        const mergedFavorites = [...new Set([...user.favorites, ...guestFavorites])];
+        user.favorites = mergedFavorites;
+        localStorage.setItem('currentUser', JSON.stringify(user));
+        localStorage.removeItem(GUEST_FAVORITES_KEY);
+        setGuestFavorites([]);
+      }
+      
       toast({ title: "Login successful", description: `Welcome back, ${user.username}!` });
       return true;
     } 
@@ -87,6 +107,14 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     const user = registerUser(username, email, password);
     
     if (user) {
+      // Merge guest favorites with new user
+      if (guestFavorites.length > 0) {
+        user.favorites = [...guestFavorites];
+        localStorage.setItem('currentUser', JSON.stringify(user));
+        localStorage.removeItem(GUEST_FAVORITES_KEY);
+        setGuestFavorites([]);
+      }
+      
       setCurrentUser(user);
       toast({ title: "Registration successful", description: "Your account has been created" });
       return true;
@@ -102,31 +130,51 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   
   // Toggle favorite recipe
   const toggleFavoriteRecipe = (recipeId: string) => {
-    if (!currentUser) {
-      toast({ 
-        title: "Authentication required", 
-        description: "Please login to save favorites", 
-        variant: "destructive" 
-      });
-      return;
-    }
-    
-    const success = toggleFavorite(currentUser.id, recipeId);
-    if (success) {
-      const updatedUser = getCurrentUser();
-      setCurrentUser(updatedUser);
+    if (currentUser) {
+      // Logged in user - use normal toggle
+      const success = toggleFavorite(currentUser.id, recipeId);
+      if (success) {
+        const updatedUser = getCurrentUser();
+        setCurrentUser(updatedUser);
+        
+        const isFav = updatedUser?.favorites.includes(recipeId);
+        toast({ 
+          title: isFav ? "Added to favorites" : "Removed from favorites",
+          description: isFav ? "Recipe saved to your favorites" : "Recipe removed from your favorites"
+        });
+      }
+    } else {
+      // Guest user - save to local storage
+      let updatedFavorites: string[];
       
-      const isFav = updatedUser?.favorites.includes(recipeId);
-      toast({ 
-        title: isFav ? "Added to favorites" : "Removed from favorites",
-        description: isFav ? "Recipe saved to your favorites" : "Recipe removed from your favorites"
-      });
+      if (guestFavorites.includes(recipeId)) {
+        // Remove from favorites
+        updatedFavorites = guestFavorites.filter(id => id !== recipeId);
+        toast({
+          title: "Removed from favorites",
+          description: "Recipe removed from your favorites"
+        });
+      } else {
+        // Add to favorites
+        updatedFavorites = [...guestFavorites, recipeId];
+        toast({
+          title: "Added to favorites",
+          description: "Recipe saved to your favorites"
+        });
+      }
+      
+      setGuestFavorites(updatedFavorites);
+      localStorage.setItem(GUEST_FAVORITES_KEY, JSON.stringify(updatedFavorites));
     }
   };
   
   // Check if recipe is in favorites
   const isRecipeFavorite = (recipeId: string): boolean => {
-    return currentUser ? currentUser.favorites.includes(recipeId) : false;
+    if (currentUser) {
+      return currentUser.favorites.includes(recipeId);
+    } else {
+      return guestFavorites.includes(recipeId);
+    }
   };
   
   // Refresh recipes

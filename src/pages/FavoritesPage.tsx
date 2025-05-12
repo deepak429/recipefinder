@@ -5,23 +5,20 @@ import RecipeCard from "@/components/RecipeCard";
 import { useApp } from "@/context/AppContext";
 import { Recipe } from "@/types/recipe";
 import { Button } from "@/components/ui/button";
-import { Heart } from "lucide-react";
+import { Heart, UserCircle } from "lucide-react";
 
 const FavoritesPage = () => {
-  const { recipes, currentUser, loading } = useApp();
+  const { recipes, currentUser, loading, isRecipeFavorite } = useApp();
   const [favoriteRecipes, setFavoriteRecipes] = useState<Recipe[]>([]);
   const navigate = useNavigate();
   
   useEffect(() => {
-    if (currentUser) {
-      const userFavorites = recipes.filter((recipe) => 
-        currentUser.favorites.includes(recipe.id)
-      );
-      setFavoriteRecipes(userFavorites);
-    } else {
-      setFavoriteRecipes([]);
-    }
-  }, [recipes, currentUser]);
+    // Get favorites for all recipes regardless of auth status
+    const userFavorites = recipes.filter((recipe) => 
+      isRecipeFavorite(recipe.id)
+    );
+    setFavoriteRecipes(userFavorites);
+  }, [recipes, currentUser, isRecipeFavorite]);
   
   if (loading) {
     return (
@@ -33,28 +30,17 @@ const FavoritesPage = () => {
     );
   }
   
-  if (!currentUser) {
-    return (
-      <div className="container mx-auto py-12 px-4 text-center">
-        <div className="max-w-md mx-auto bg-muted p-8 rounded-lg shadow-sm">
-          <Heart className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-          <h1 className="text-2xl font-bold mb-4">Login to view your favorites</h1>
-          <p className="text-muted-foreground mb-6">
-            Create an account or log in to save your favorite recipes and access them anytime.
-          </p>
-          <div className="flex justify-center gap-4">
-            <Button onClick={() => navigate("/")}>
-              Browse Recipes
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-  
   return (
     <div className="container mx-auto py-8 px-4">
-      <h1 className="text-3xl font-bold mb-8">Your Favorite Recipes</h1>
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-bold">Your Favorite Recipes</h1>
+        {!currentUser && (
+          <div className="inline-flex items-center gap-2 text-sm text-muted-foreground bg-muted px-4 py-2 rounded-full">
+            <UserCircle className="h-4 w-4" />
+            <span>Guest Mode</span>
+          </div>
+        )}
+      </div>
       
       {favoriteRecipes.length === 0 ? (
         <div className="text-center py-12 bg-muted rounded-lg">
@@ -72,6 +58,18 @@ const FavoritesPage = () => {
           {favoriteRecipes.map((recipe) => (
             <RecipeCard key={recipe.id} recipe={recipe} />
           ))}
+        </div>
+      )}
+      
+      {!currentUser && favoriteRecipes.length > 0 && (
+        <div className="mt-8 bg-muted p-4 rounded-lg">
+          <p className="text-sm text-center text-muted-foreground">
+            Your favorites are saved in your browser. 
+            <Button variant="link" onClick={() => navigate("/")}>
+              Create an account
+            </Button> 
+            to save favorites across devices.
+          </p>
         </div>
       )}
     </div>

@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AppProvider } from "@/context/AppContext";
 import Header from "@/components/Header";
+import Footer from "@/components/Footer";
 import HomePage from "@/pages/HomePage";
 import RecipeDetailPage from "@/pages/RecipeDetailPage";
 import FavoritesPage from "@/pages/FavoritesPage";
@@ -34,6 +35,7 @@ const App = () => (
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </main>
+            <Footer />
           </div>
         </BrowserRouter>
       </AppProvider>
